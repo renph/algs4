@@ -5,12 +5,14 @@ import edu.princeton.cs.algs4.WeightedQuickUnionUF;
 public class Percolation {
     private static final int[][] DIRS = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
 
-    private boolean[][] site = null;
+    private boolean[][] site;
     private int nOpenSites = 0;
     private final int size;
     private final WeightedQuickUnionUF uf;
-    private final WeightedQuickUnionUF uf2;
-//    private int percolated = -1;
+    //    private final WeightedQuickUnionUF uf2;
+    private boolean percolated = false;
+    private boolean[] connectTop;
+    private boolean[] connectBottom;
 
     // create n-by-n grid, with all sites blocked
     public Percolation(int n) {
@@ -19,12 +21,12 @@ public class Percolation {
         }
         this.size = n;
         this.site = new boolean[n][n];
+        connectTop = new boolean[n * n];
+        connectBottom = new boolean[n * n];
         this.uf = new WeightedQuickUnionUF(n * n + 1);
-        this.uf2 = new WeightedQuickUnionUF(n * n + 2);
+
         for (int i = 0; i < n; i++) {
             this.uf.union(i, n * n);
-            this.uf2.union(i, n * n);
-            this.uf2.union(n * (n - 1) + i, n * n + 1);
         }
     }
 
@@ -42,26 +44,39 @@ public class Percolation {
             return;
         }
         this.site[row][col] = true;
-//            if (row == size - 1) {
-//                this.uf.union(row * size + col, size * size + 1);
-//            }
+
         unionNeighbours(row, col);
         this.nOpenSites += 1;
     }
 
     private void unionNeighbours(int row, int col) {
+        int idx = row * size + col;
+        boolean top = false;
+        boolean bottom = false;
         for (int[] d : DIRS) {
             int row0 = row + d[0];
             int col0 = col + d[1];
 //                StdOut.printf("%d,%d,%d,%d\n", row, col, row0, col0);
             try {
                 if (isOpen(row0 + 1, col0 + 1)) {
-                    this.uf.union(row0 * size + col0, row * size + col);
-                    this.uf2.union(row0 * size + col0, row * size + col);
+                    int idx0 = row0 * size + col0;
+                    if (connectTop[uf.find(idx0)] || connectTop[uf.find(idx)]) {
+                        top = true;
+                    }
+                    if (connectBottom[uf.find(idx0)] || connectBottom[uf.find(idx)]) {
+                        bottom = true;
+                    }
+                    this.uf.union(idx0, idx);
                 }
             } catch (IllegalArgumentException ignored) {
 
             }
+        }
+        connectTop[uf.find(idx)] = top || (row == 0);
+        connectBottom[uf.find(idx)] = bottom || (row == size - 1);
+
+        if (connectTop[uf.find(idx)] && connectBottom[uf.find(idx)]) {
+            percolated = true;
         }
     }
 
@@ -84,7 +99,8 @@ public class Percolation {
     }
 
     public boolean percolates() {
-        return uf2.connected(size * size, size * size + 1);
+//        return uf2.connected(size * size, size * size + 1);
+        return percolated;
     }
 
 
@@ -92,15 +108,15 @@ public class Percolation {
 
 //        In in = new In(args[0]);
         In in = new In("greeting57.txt");
+//        In in = new In("input3.txt");
         int n = in.readInt();
         Percolation perc = new Percolation(n);
         while (!in.isEmpty()) {
             int i = in.readInt();
             int j = in.readInt();
             perc.open(i, j);
-
         }
-        StdOut.printf("%b", perc.percolates());
+        StdOut.printf("%b\n", perc.percolates());
 
 
     }
